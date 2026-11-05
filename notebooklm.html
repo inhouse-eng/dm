@@ -42,10 +42,10 @@ footer a{overflow-wrap:anywhere;word-break:break-all}
 </ul>
 <h3>링크 모으기 버튼 만들기 (한 번만)</h3>
 <ol>
-<li>아래 코드를 <b>복사</b> 버튼으로 복사해요.</li>
-<li>크롬 위쪽 <b>북마크 바</b>에서 오른쪽 클릭 → <b>페이지 추가</b>(북마크 바가 안 보이면 Ctrl + Shift + B).</li>
-<li>이름은 아무거나(예: 링크 모으기), <b>URL 칸에 코드를 붙여 넣고</b> 저장.</li>
-<li>유튜브 검색 결과 화면에서 이 북마크를 누르면 <b>화면에 보이는 영상 링크가 한 번에 복사</b>돼요. 아래로 조금 내린 뒤 누르면 더 많이 모여요.</li>
+<li>아래 코드 상자 오른쪽 위 <b>복사</b>를 눌러요(&quot;복사됨&quot;이 뜨면 된 거예요).</li>
+<li>크롬에서 <b>Ctrl + Shift + O</b> → 북마크 관리자가 열려요. 오른쪽 위 <b>⋮ → 새 북마크 추가</b>.</li>
+<li>이름은 <b>링크 모으기</b>, <b>URL 칸에 코드를 붙여 넣고</b> 저장.</li>
+<li>크롬 위쪽 <b>북마크 바</b>에 &#x27;링크 모으기&#x27;가 생겨요(안 보이면 <b>Ctrl + Shift + B</b>). 유튜브 검색 결과 화면에서 누르면 <b>화면에 보이는 영상 링크가 한 번에 복사</b>돼요. 아래로 조금 내린 뒤 누르면 더 많이 모여요.</li>
 </ol>
 <div class="cw"><pre>javascript:(()=&gt;{const s=new Set();document.querySelectorAll(&#x27;ytd-video-renderer a#video-title&#x27;).forEach(a=&gt;{const m=(a.href||&#x27;&#x27;).match(/[?&amp;]v=([\w-]{11})/);if(m)s.add(&#x27;https://www.youtube.com/watch?v=&#x27;+m[1])});const t=[...s].join(&#x27;\n&#x27;);navigator.clipboard.writeText(t).catch(()=&gt;{const x=document.createElement(&#x27;textarea&#x27;);x.value=t;document.body.appendChild(x);x.select();document.execCommand(&#x27;copy&#x27;);x.remove()});const d=document.createElement(&#x27;div&#x27;);d.textContent=&#x27;✅ 유튜브 링크 &#x27;+s.size+&#x27;개 복사 완료&#x27;;d.style.cssText=&#x27;position:fixed;top:90px;left:50%;transform:translateX(-50%);z-index:99999;background:#13ff6a;color:#000;font:800 30px sans-serif;padding:18px 36px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,.35)&#x27;;document.body.appendChild(d);setTimeout(()=&gt;d.remove(),4000)})();</pre><button class="cp" type="button">복사</button></div>
 <div class="q">영상에서는 &#x27;2027 경제 전망&#x27; 20분 넘는 영상 40개(다 합치면 25시간 넘음)를 넣었고, 1분이 안 돼 40개가 모두 들어갔어요.</div>
