@@ -50,7 +50,7 @@ import * as THREE from 'https://unpkg.com/three@0.160.0/build/three.module.js';
 const $=s=>document.querySelector(s);
 const R=(a,b)=>a+Math.random()*(b-a), PICK=a=>a[Math.floor(Math.random()*a.length)];
 const url=new URL(location.href); const STAGE=parseInt(url.searchParams.get('v')||'9',10); // 단계 스위치(영상 촬영용): 1 걷기 2 둘러보기 3 사람 4 활동 5 분위기 9 전체
-const FINAL=STAGE>=9;
+const FINAL=STAGE>=6;
 const WORLD=46;
 
 /* ---------- 장면 ---------- */
@@ -252,8 +252,7 @@ function drawMap(){mx.fillStyle='#0f1424';mx.fillRect(0,0,480,480);mx.fillStyle=
 function openMap(){drawMap();$('#modal').classList.add('show')}
 $('#bMap').onclick=openMap;$('#close').onclick=()=>$('#modal').classList.remove('show');
 mp.addEventListener('click',e=>{const r=mp.getBoundingClientRect(),k=480/r.width,x=((e.clientX-r.left)*k-240)/MS,z=((e.clientY-r.top)*k-240)/MS;$('#modal').classList.remove('show');goTo(x,z)});
-if(STAGE<3)$('#bMap').style.display='none';
-if(STAGE<3&&STAGE>=2)$('#bMap').style.display='none';
+if(STAGE<6)$('#bMap').style.display='none';
 window.__moon={me,npcs,goTo,doAct,openMap,camera,set:(y,p,d)=>{camYaw=y;camPitch=p;camDist=camDistT=d}};
 
 /* ---------- NPC 두뇌 ---------- */
@@ -287,6 +286,7 @@ function loop(now){requestAnimationFrame(loop);const dt=Math.min(.05,(now-last)/
     const m2=stepChar(n,dt,nx,nz);
     for(const o of [me,...npcs]){if(o===n)continue;const ddx=n.x-o.x,ddz=n.z-o.z,dd=Math.hypot(ddx,ddz);if(dd<1.1&&dd>1e-3){n.x+=ddx/dd*(1.1-dd)*.5;n.z+=ddz/dd*(1.1-dd)*.5}}
     animChar(n,dt,m2,tm)}
+  for(const o of [me,...npcs]){const tg=o.obj.userData.tag,dd=camera.position.distanceTo(o.obj.position),k=Math.min(1.25,Math.max(.6,dd/17));tg.scale.set(3.0*k,.75*k,1)}
   // 연기·등불
   for(let i=steams.length-1;i>=0;i--){const s=steams[i];s.t+=dt;s.m.position.y+=dt*.9;s.m.material.opacity=Math.max(0,.7-s.t*.7);if(s.t>1){scene.remove(s.m);steams.splice(i,1)}}
   for(const f of floaters){f.t+=dt;f.g.position.y+=dt*(.9+f.t*.03);f.g.position.x+=f.vx*dt;f.g.position.z+=f.vz*dt}
