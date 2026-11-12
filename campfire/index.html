@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>눈 오는 밤 장작불 · 나의 온라인 쉼터</title>
+<style>
+  html,body{margin:0;height:100%;background:#070b17;overflow:hidden;font-family:"Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;-webkit-tap-highlight-color:transparent}
+  canvas{display:block;width:100vw;height:100vh;touch-action:manipulation}
+  .title{position:fixed;left:0;right:0;top:max(18px,env(safe-area-inset-top));text-align:center;color:#fff3e2;text-shadow:0 2px 10px rgba(0,0,0,.6);pointer-events:none}
+  .title b{display:block;font-size:clamp(20px,3.2vw,34px);letter-spacing:.08em}
+  .title span{display:block;margin-top:4px;font-size:clamp(12px,1.5vw,16px);opacity:.85}
+  .bar{position:fixed;left:0;right:0;bottom:max(18px,env(safe-area-inset-bottom));display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:0 12px}
+  .bar button{appearance:none;border:1.5px solid rgba(255,225,190,.4);background:rgba(20,14,12,.6);backdrop-filter:blur(8px);color:#fff3e2;border-radius:999px;padding:12px 22px;font-weight:700;font-size:clamp(15px,2vw,19px);font-family:inherit;cursor:pointer;transition:.15s}
+  .bar button:hover{background:rgba(120,70,40,.75)}
+  .bar button:active{transform:scale(.96)}
+  .bar button.on{background:rgba(240,150,70,.9);color:#2a1206;border-color:transparent}
+  .count{position:fixed;right:max(16px,env(safe-area-inset-right));top:max(18px,env(safe-area-inset-top));color:#fff3e2;background:rgba(20,14,12,.55);border-radius:999px;padding:8px 16px;font-weight:700;font-size:clamp(13px,1.6vw,17px);display:none}
+  .hint{position:fixed;left:0;right:0;bottom:92px;text-align:center;color:#fff3e2;font-size:clamp(13px,1.6vw,17px);text-shadow:0 1px 8px #000;opacity:0;transition:opacity .6s;pointer-events:none}
+  .hint.show{opacity:.9}
+  @media (max-width:700px){.count{top:86px;right:50%;transform:translateX(50%)}.hint{bottom:170px}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="title"><b>눈 오는 밤 장작불</b><span>눈 내리는 밤, 장작불 앞에 앉아 불멍</span></div>
+<div class="count" id="count"></div>
+<div class="hint" id="hint"></div>
+<div class="bar" id="bar"></div>
+<script>
+(() => {
+  const cv = document.getElementById('c'), g = cv.getContext('2d'); const W = 1600, H = 900;
+  let DPR = 1, SC = 1, OX = 0, OY = 0;
+  function fit() { DPR = Math.min(2, devicePixelRatio || 1); cv.width = innerWidth * DPR; cv.height = innerHeight * DPR; SC = Math.max(innerWidth / W, innerHeight / H); OX = (innerWidth - W * SC) / 2; OY = (innerHeight - H * SC) / 2; if (innerWidth < innerHeight) { SC = innerWidth / 900; OX = innerWidth / 2 - 1000 * SC; OY = innerHeight * .5 - 560 * SC; } }
+  addEventListener('resize', fit); fit();
+  let AC = null, snowOn = true, soundOn = false, crackleT = 0;
+  function audio() { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); return AC; }
+  function crackle(v) { const a = audio(), len = a.sampleRate * .08, buf = a.createBuffer(1, len, a.sampleRate), d = buf.getChannelData(0); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3); const s = a.createBufferSource(); s.buffer = buf; const gn = a.createGain(); gn.gain.value = v; const hp = a.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 900; s.connect(hp); hp.connect(gn); gn.connect(a.destination); s.start(); }
+  const S = { t: 0, logs: +(localStorage.getItem('logs') || 0), power: 1, flames: [], sparks: [], snow: [], stars: [] };
+  for (let i = 0; i < 160; i++) S.stars.push({ x: Math.random() * W, y: Math.random() * 380, r: Math.random() * 1.6 + .3, p: Math.random() * 6 });
+  for (let i = 0; i < 220; i++) S.snow.push({ x: Math.random() * W, y: Math.random() * H, r: 1.2 + Math.random() * 2.6, v: 30 + Math.random() * 60, p: Math.random() * 6 });
+  const rnd = n => { const x = Math.sin(n * 91.7) * 43758.5453; return x - Math.floor(x); };
+  function glow(x, y, r, c, a) { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(${c},${a})`); gr.addColorStop(1, `rgba(${c},0)`); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+  function fir(x, y, s, c) { g.fillStyle = c; for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(x, y - 90 * s - i * 62 * s); g.lineTo(x - (60 - i * 8) * s, y - i * 62 * s); g.lineTo(x + (60 - i * 8) * s, y - i * 62 * s); g.fill(); } g.fillRect(x - 8 * s, y, 16 * s, 28 * s); }
+  function firSnow(x, y, s) { g.fillStyle = 'rgba(235,244,255,.85)'; for (let i = 0; i < 4; i++) { g.beginPath(); g.moveTo(x, y - 90 * s - i * 62 * s); g.lineTo(x - (30 - i * 4) * s, y - 50 * s - i * 62 * s); g.lineTo(x + (30 - i * 4) * s, y - 50 * s - i * 62 * s); g.fill(); } }
+  function cabin() {
+    const x = 170, y = 640;
+    g.fillStyle = '#3a2418'; g.fillRect(x, y - 190, 420, 190);
+    for (let i = 0; i < 9; i++) { g.fillStyle = i % 2 ? '#47291b' : '#3a2015'; g.fillRect(x, y - 190 + i * 21, 420, 19); g.fillStyle = '#5a3724'; g.beginPath(); g.ellipse(x, y - 180 + i * 21, 9, 9, 0, 0, 7); g.fill(); g.beginPath(); g.ellipse(x + 420, y - 180 + i * 21, 9, 9, 0, 0, 7); g.fill(); }
+    g.fillStyle = '#26160e'; g.beginPath(); g.moveTo(x - 40, y - 185); g.lineTo(x + 210, y - 330); g.lineTo(x + 460, y - 185); g.fill();
+    g.fillStyle = '#e9f1fb'; g.beginPath(); g.moveTo(x - 46, y - 183); g.lineTo(x + 210, y - 336); g.lineTo(x + 466, y - 183); g.quadraticCurveTo(x + 440, y - 196, x + 400, y - 190); g.quadraticCurveTo(x + 330, y - 214, x + 260, y - 196); g.quadraticCurveTo(x + 150, y - 222, x + 60, y - 192); g.quadraticCurveTo(x + 10, y - 200, x - 46, y - 183); g.fill();
+    const fl = .8 + .2 * Math.sin(S.t * 7) + .1 * Math.sin(S.t * 13);
+    glow(x + 110, y - 100, 160, '255,170,70', .5 * fl); g.fillStyle = `rgba(255,${190 + 20 * fl | 0},110,1)`; g.fillRect(x + 70, y - 135, 80, 70); g.strokeStyle = '#26160e'; g.lineWidth = 6; g.strokeRect(x + 70, y - 135, 80, 70); g.beginPath(); g.moveTo(x + 110, y - 135); g.lineTo(x + 110, y - 65); g.moveTo(x + 70, y - 100); g.lineTo(x + 150, y - 100); g.stroke();
+    g.fillStyle = '#2a1a10'; g.fillRect(x + 270, y - 150, 70, 150); g.fillStyle = '#3a2418'; g.fillRect(x + 276, y - 144, 58, 144);
+    g.fillStyle = '#26160e'; g.fillRect(x + 300, y - 330, 40, 80); g.fillStyle = '#e9f1fb'; g.fillRect(x + 296, y - 336, 48, 12);
+    for (let i = 0; i < 4; i++) { glow(x + 320 + Math.sin(S.t + i) * 10 + i * 6, y - 370 - i * 50 - (S.t * 20 % 40), 20 + i * 8, '170,180,200', .12); }
+  }
+  function fire() {
+    const x = 1060, y = 740, p = S.power;
+    glow(x, y - 40, 420 * p, '255,140,50', .38 * Math.min(1.3, p)); glow(x, y - 20, 220 * p, '255,200,110', .35 * Math.min(1.3, p));
+    // 돌 둘레
+    for (let i = 0; i < 12; i++) { const a = i / 12 * 6.28; g.fillStyle = i % 2 ? '#585c66' : '#6a6e78'; g.beginPath(); g.ellipse(x + Math.cos(a) * 118, y + 14 + Math.sin(a) * 30, 22, 14, 0, 0, 7); g.fill(); }
+    // 장작
+    g.save(); g.translate(x, y + 4); [[-60, .25], [50, -.3], [0, .02]].forEach(([dx, r], i) => { g.save(); g.rotate(r); g.fillStyle = i == 2 ? '#4a2c1a' : '#3a2214'; g.fillRect(dx - 70, -14, 140, 28); g.fillStyle = '#6b4128'; g.beginPath(); g.ellipse(dx + 70, 0, 8, 14, 0, 0, 7); g.fill(); g.restore(); }); g.restore();
+    g.globalCompositeOperation = 'lighter';
+    S.flames.forEach(f => { const k = f.life / f.max; glow(f.x, f.y, f.r * (.6 + k), k > .5 ? '255,170,60' : '255,90,30', .28 * k); });
+    g.globalCompositeOperation = 'source-over';
+    S.flames.forEach(f => { const k = f.life / f.max; g.fillStyle = k > .6 ? `rgba(255,236,160,${k})` : k > .3 ? `rgba(255,150,50,${k})` : `rgba(210,70,25,${k * .8})`; g.beginPath(); g.ellipse(f.x, f.y, f.r * .55 * k + 3, f.r * k + 4, 0, 0, 7); g.fill(); });
+    S.sparks.forEach(s => { g.fillStyle = `rgba(255,${160 + s.life * 80 | 0},60,${Math.min(1, s.life)})`; g.fillRect(s.x, s.y, 2.4, 2.4); });
+  }
+  function frame(ts) {
+    const dt = Math.min(.05, (ts - (frame.l || ts)) / 1000); frame.l = ts; S.t += dt;
+    g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, innerWidth, innerHeight); g.translate(OX, OY); g.scale(SC, SC);
+    const sky = g.createLinearGradient(0, 0, 0, 640); sky.addColorStop(0, '#080d1f'); sky.addColorStop(.6, '#16254a'); sky.addColorStop(1, '#3a4a78'); g.fillStyle = sky; g.fillRect(-1600, -2600, W + 3200, 3300);
+    S.stars.forEach(s => { g.fillStyle = `rgba(255,255,255,${.4 + .5 * Math.abs(Math.sin(S.t * .8 + s.p))})`; g.beginPath(); g.arc(s.x, s.y, s.r, 0, 7); g.fill(); });
+    glow(1300, 150, 120, '210,225,255', .5); g.fillStyle = '#eaf1ff'; g.beginPath(); g.arc(1300, 150, 44, 0, 7); g.fill(); g.fillStyle = '#c7d4ee'; g.beginPath(); g.arc(1286, 140, 8, 0, 7); g.arc(1316, 166, 6, 0, 7); g.fill();
+    for (let i = 0; i < 24; i++) { const x = -60 + i * 76 + rnd(i) * 30, s = .8 + rnd(i + 5) * .7; fir(x, 560 + rnd(i + 2) * 40, s * .8, '#0f1c33'); }
+    for (let i = 0; i < 16; i++) { const x = 20 + i * 108 + rnd(i + 9) * 40, s = .9 + rnd(i + 7) * .6; fir(x, 610 + rnd(i + 3) * 30, s, '#142843'); firSnow(x, 610 + rnd(i + 3) * 30, s); }
+    const gr = g.createLinearGradient(0, 600, 0, 900); gr.addColorStop(0, '#5c6f96'); gr.addColorStop(.4, '#8fa2c6'); gr.addColorStop(1, '#c7d4ec'); g.fillStyle = gr; g.fillRect(-1600, 640, W + 3200, 2600);
+    glow(1060, 740, 520 * S.power, '255,140,60', .22);
+    cabin(); fire();
+    // 그루터기 의자
+    [[800, 800], [1300, 810]].forEach(([x, y]) => { g.fillStyle = '#3a2416'; g.fillRect(x - 46, y - 30, 92, 40); g.fillStyle = '#7a5538'; g.beginPath(); g.ellipse(x, y - 30, 46, 14, 0, 0, 7); g.fill(); g.fillStyle = '#e9f1fb'; g.beginPath(); g.ellipse(x, y - 34, 40, 9, 0, 0, 7); g.fill(); });
+    // 불 입자
+    const rate = 6 * S.power; for (let i = 0; i < rate; i++) if (Math.random() < .9) S.flames.push({ x: 1060 + (Math.random() - .5) * 90 * S.power, y: 742, vx: (Math.random() - .5) * 18, vy: -(60 + Math.random() * 90) * S.power, r: 16 + Math.random() * 20 * S.power, life: .7 + Math.random() * .6, max: 1.3 });
+    S.flames.forEach(f => { f.x += f.vx * dt + Math.sin(S.t * 6 + f.y * .05) * .6; f.y += f.vy * dt; f.life -= dt; }); S.flames = S.flames.filter(f => f.life > 0);
+    if (Math.random() < .5 * S.power) S.sparks.push({ x: 1060 + (Math.random() - .5) * 60, y: 700, vx: (Math.random() - .5) * 60, vy: -(80 + Math.random() * 120), life: 1 + Math.random() });
+    S.sparks.forEach(s => { s.x += s.vx * dt; s.y += s.vy * dt; s.vy += 8 * dt; s.life -= dt * .8; }); S.sparks = S.sparks.filter(s => s.life > 0);
+    S.power += (1 - S.power) * dt * .35; if (S.power > 1.02) S.power -= .002;
+    // 눈
+    if (snowOn) { g.fillStyle = 'rgba(255,255,255,.88)'; S.snow.forEach(s => { s.y += s.v * dt; s.x += Math.sin(S.t + s.p) * 14 * dt - 6 * dt; if (s.y > H + 10) { s.y = -10; s.x = Math.random() * (W + 200); } g.beginPath(); g.arc(s.x, s.y, s.r, 0, 7); g.fill(); }); }
+    crackleT -= dt; if (soundOn && crackleT < 0) { crackle(.05 + Math.random() * .1); crackleT = .05 + Math.random() * .5 / S.power; }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  const bar = document.getElementById('bar'), hint = document.getElementById('hint'), cnt = document.getElementById('count');
+  function say(t) { hint.textContent = t; hint.classList.add('show'); clearTimeout(say.t); say.t = setTimeout(() => hint.classList.remove('show'), 2600); }
+  function upd() { cnt.style.display = S.logs ? 'block' : 'none'; cnt.textContent = `오늘 넣은 장작 ${S.logs}개`; }
+  function add(label, fn) { const b = document.createElement('button'); b.textContent = label; b.onclick = () => fn(b); bar.appendChild(b); return b; }
+  add('🪵 장작 넣기', () => { audio(); S.power = Math.min(2.2, S.power + .7); S.logs++; localStorage.setItem('logs', S.logs); upd(); for (let i = 0; i < 14; i++) S.sparks.push({ x: 1060 + (Math.random() - .5) * 70, y: 720, vx: (Math.random() - .5) * 140, vy: -(120 + Math.random() * 200), life: 1.4 }); for (let i = 0; i < 4; i++) setTimeout(() => crackle(.25), i * 70); say('불길이 커졌어요'); });
+  add('❄ 눈 내리기', (b) => { snowOn = !snowOn; b.classList.toggle('on', snowOn); say(snowOn ? '눈이 내려요' : '눈이 그쳤어요'); }).classList.add('on');
+  add('🔥 타닥타닥', (b) => { audio(); soundOn = !soundOn; b.classList.toggle('on', soundOn); say(soundOn ? '타닥타닥 소리' : '조용해졌어요'); });
+  upd();
+})();
+</script>
+</body>
+</html>

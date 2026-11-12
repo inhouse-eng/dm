@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>노을 바닷가 · 나의 온라인 쉼터</title>
+<style>
+  html,body{margin:0;height:100%;background:#2a1b3c;overflow:hidden;font-family:"Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;-webkit-tap-highlight-color:transparent}
+  canvas{display:block;width:100vw;height:100vh;touch-action:manipulation}
+  .title{position:fixed;left:0;right:0;top:max(18px,env(safe-area-inset-top));text-align:center;color:#fff6ea;text-shadow:0 2px 10px rgba(60,20,30,.6);pointer-events:none}
+  .title b{display:block;font-size:clamp(20px,3.2vw,34px);letter-spacing:.08em}
+  .title span{display:block;margin-top:4px;font-size:clamp(12px,1.5vw,16px);opacity:.9}
+  .bar{position:fixed;left:0;right:0;bottom:max(18px,env(safe-area-inset-bottom));display:flex;gap:10px;justify-content:center;flex-wrap:wrap;padding:0 12px}
+  .bar button{appearance:none;border:1.5px solid rgba(255,235,215,.5);background:rgba(60,30,50,.55);backdrop-filter:blur(8px);color:#fff6ea;border-radius:999px;padding:12px 22px;font-weight:700;font-size:clamp(15px,2vw,19px);font-family:inherit;cursor:pointer;transition:.15s}
+  .bar button:hover{background:rgba(140,70,80,.7)}
+  .bar button:active{transform:scale(.96)}
+  .bar button.on{background:rgba(255,190,130,.92);color:#40180e;border-color:transparent}
+  .count{position:fixed;right:max(16px,env(safe-area-inset-right));top:max(18px,env(safe-area-inset-top));color:#fff6ea;background:rgba(60,30,50,.5);border-radius:999px;padding:8px 16px;font-weight:700;font-size:clamp(13px,1.6vw,17px);display:none}
+  .hint{position:fixed;left:0;right:0;bottom:92px;text-align:center;color:#fff6ea;font-size:clamp(13px,1.6vw,17px);text-shadow:0 1px 8px #000;opacity:0;transition:opacity .6s;pointer-events:none}
+  .hint.show{opacity:.95}
+  @media (max-width:700px){.count{top:86px;right:50%;transform:translateX(50%)}.hint{bottom:170px}}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div class="title"><b>노을 바닷가</b><span>해 질 녘, 파도 소리 들으며 조개 줍기</span></div>
+<div class="count" id="count"></div>
+<div class="hint" id="hint"></div>
+<div class="bar" id="bar"></div>
+<script>
+(() => {
+  const cv = document.getElementById('c'), g = cv.getContext('2d'); const W = 1600, H = 900;
+  let DPR = 1, SC = 1, OX = 0, OY = 0;
+  function fit() { DPR = Math.min(2, devicePixelRatio || 1); cv.width = innerWidth * DPR; cv.height = innerHeight * DPR; SC = Math.max(innerWidth / W, innerHeight / H); OX = (innerWidth - W * SC) / 2; OY = (innerHeight - H * SC) / 2; if (innerWidth < innerHeight) { SC = innerWidth / 900; OX = innerWidth / 2 - 800 * SC; OY = innerHeight * .5 - 470 * SC; } }
+  addEventListener('resize', fit); fit();
+  let AC = null, waveGain = null, waveOn = false;
+  function audio() {
+    if (!AC) { AC = new (window.AudioContext || window.webkitAudioContext)(); const len = AC.sampleRate * 3, buf = AC.createBuffer(1, len, AC.sampleRate), d = buf.getChannelData(0); let b = 0; for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; b = .97 * b + .03 * w; d[i] = (w * .3 + b * 9) * .35; }
+      const s = AC.createBufferSource(); s.buffer = buf; s.loop = true; const lp = AC.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 900; waveGain = AC.createGain(); waveGain.gain.value = 0; s.connect(lp); lp.connect(waveGain); waveGain.connect(AC.destination); s.start(); }
+    if (AC.state === 'suspended') AC.resume(); return AC;
+  }
+  function chirp() { const a = audio(), o = a.createOscillator(), gn = a.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(1500, a.currentTime); o.frequency.exponentialRampToValueAtTime(2300, a.currentTime + .12); o.frequency.exponentialRampToValueAtTime(1300, a.currentTime + .3); gn.gain.setValueAtTime(.0001, a.currentTime); gn.gain.linearRampToValueAtTime(.08, a.currentTime + .05); gn.gain.exponentialRampToValueAtTime(.0001, a.currentTime + .35); o.connect(gn); gn.connect(a.destination); o.start(); o.stop(a.currentTime + .4); }
+  function ding() { const a = audio(); [1319, 1760].forEach((f, i) => { const o = a.createOscillator(), gn = a.createGain(); o.type = 'sine'; o.frequency.value = f; gn.gain.setValueAtTime(.0001, a.currentTime + i * .1); gn.gain.linearRampToValueAtTime(.1, a.currentTime + i * .1 + .01); gn.gain.exponentialRampToValueAtTime(.0001, a.currentTime + i * .1 + .8); o.connect(gn); gn.connect(a.destination); o.start(a.currentTime + i * .1); o.stop(a.currentTime + i * .1 + .9); }); }
+  const S = { t: 0, shells: +(localStorage.getItem('shells') || 0), found: [], gulls: [], clouds: [] };
+  for (let i = 0; i < 3; i++) S.gulls.push({ x: Math.random() * W, y: 160 + Math.random() * 140, v: 40 + Math.random() * 30, p: Math.random() * 6, s: .8 + Math.random() * .5 });
+  for (let i = 0; i < 6; i++) S.clouds.push({ x: Math.random() * W, y: 90 + Math.random() * 190, w: 160 + Math.random() * 220, v: 4 + Math.random() * 8 });
+  function glow(x, y, r, c, a) { const gr = g.createRadialGradient(x, y, 0, x, y, r); gr.addColorStop(0, `rgba(${c},${a})`); gr.addColorStop(1, `rgba(${c},0)`); g.fillStyle = gr; g.fillRect(x - r, y - r, r * 2, r * 2); }
+  function gull(x, y, s, p) { const f = Math.sin(S.t * 5 + p) * 10 * s; g.strokeStyle = '#4a2a38'; g.lineWidth = 3 * s; g.lineCap = 'round'; g.beginPath(); g.moveTo(x - 28 * s, y - f); g.quadraticCurveTo(x - 12 * s, y - 14 * s + f * .3, x, y); g.quadraticCurveTo(x + 12 * s, y - 14 * s + f * .3, x + 28 * s, y - f); g.stroke(); }
+  function shell(x, y, s, sp) { g.save(); g.translate(x, y); g.scale(s, s); if (sp) glow(0, 0, 40, '255,240,200', .5 * sp); g.fillStyle = '#f6d9c4'; g.beginPath(); g.moveTo(-18, 6); g.quadraticCurveTo(-22, -22, 0, -24); g.quadraticCurveTo(22, -22, 18, 6); g.quadraticCurveTo(0, 14, -18, 6); g.fill(); g.strokeStyle = '#d9a590'; g.lineWidth = 2; for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(i * 4.5, 8); g.lineTo(i * 6.5, -20); g.stroke(); } g.restore(); }
+  function frame(ts) {
+    const dt = Math.min(.05, (ts - (frame.l || ts)) / 1000); frame.l = ts; S.t += dt;
+    g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, innerWidth, innerHeight); g.translate(OX, OY); g.scale(SC, SC);
+    const sky = g.createLinearGradient(0, 0, 0, 560); sky.addColorStop(0, '#2b2050'); sky.addColorStop(.35, '#8a3f6a'); sky.addColorStop(.7, '#f0704f'); sky.addColorStop(1, '#ffcf8a'); g.fillStyle = sky; g.fillRect(-1600, -2600, W + 3200, 3200);
+    glow(800, 520, 560, '255,200,120', .55); glow(800, 520, 260, '255,235,170', .75);
+    g.fillStyle = '#fff1c2'; g.beginPath(); g.arc(800, 510, 78, 0, 7); g.fill();
+    S.clouds.forEach(c => { c.x += c.v * dt; if (c.x > W + 300) c.x = -300; g.fillStyle = 'rgba(255,170,150,.5)'; [0, .3, .62].forEach((k, i) => { g.beginPath(); g.ellipse(c.x + c.w * k, c.y - i * 6, c.w * (.4 - i * .07), 24, 0, 0, 7); g.fill(); }); g.fillStyle = 'rgba(120,50,100,.25)'; g.beginPath(); g.ellipse(c.x + c.w * .3, c.y + 12, c.w * .5, 8, 0, 0, 7); g.fill(); });
+    // 바다
+    const sea = g.createLinearGradient(0, 560, 0, 760); sea.addColorStop(0, '#f08a5e'); sea.addColorStop(.25, '#b85a6e'); sea.addColorStop(1, '#4a3a68'); g.fillStyle = sea; g.fillRect(-1600, 560, W + 3200, 260);
+    // 햇빛 길
+    for (let i = 0; i < 22; i++) { const y = 566 + i * 9, w = 120 - i * 3.6 + Math.sin(S.t * 1.6 + i) * 14; g.fillStyle = `rgba(255,236,170,${.55 - i * .02})`; g.fillRect(800 - w / 2 + Math.sin(S.t + i * .7) * 6, y, w, 3); }
+    for (let k = 0; k < 4; k++) { const y0 = 600 + k * 52 + Math.sin(S.t * .6 + k) * 4; g.strokeStyle = `rgba(255,220,200,${.12 + k * .03})`; g.lineWidth = 2; g.beginPath(); for (let x = -1600; x <= W + 1600; x += 30) g.lineTo(x, y0 + Math.sin(x * .014 + S.t * (.9 + k * .15) + k) * (3 + k * 1.6)); g.stroke(); }
+    // 모래사장 + 파도
+    const sandTop = 760 + Math.sin(S.t * .5) * 3; const sand = g.createLinearGradient(0, sandTop, 0, 900); sand.addColorStop(0, '#e6b99a'); sand.addColorStop(1, '#c58f78'); g.fillStyle = sand; g.beginPath(); g.moveTo(-1600, 900 + 1700); g.lineTo(-1600, sandTop); for (let x = -1600; x <= W + 1600; x += 30) g.lineTo(x, sandTop + 22 + Math.sin(x * .01 + S.t * .8) * 10 + Math.sin(S.t * .45) * 22); g.lineTo(W + 1600, 900 + 1700); g.fill();
+    const wash = (Math.sin(S.t * .45) + 1) / 2; g.fillStyle = `rgba(255,236,225,${.35 + wash * .2})`; g.beginPath(); g.moveTo(-1600, sandTop - 6); for (let x = -1600; x <= W + 1600; x += 30) g.lineTo(x, sandTop + 18 + Math.sin(x * .01 + S.t * .8) * 10 + Math.sin(S.t * .45) * 22); g.lineTo(W + 1600, sandTop - 6); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.7)'; g.beginPath(); for (let x = -1600; x <= W + 1600; x += 20) { g.lineTo(x, sandTop + 20 + Math.sin(x * .01 + S.t * .8) * 10 + Math.sin(S.t * .45) * 22 + Math.sin(x * .09 + S.t * 3) * 2.2); } g.lineTo(W + 1600, sandTop + 26); g.lineTo(-1600, sandTop + 26); g.fill();
+    // 찾은 조개
+    S.found.forEach(f => { f.sp = Math.max(0, f.sp - dt * .5); shell(f.x, f.y, f.s, f.sp); });
+    // 갈매기
+    S.gulls.forEach(b => { b.x += b.v * dt; b.y += Math.sin(S.t * .8 + b.p) * .3; if (b.x > W + 60) { b.x = -60; b.y = 140 + Math.random() * 160; } gull(b.x, b.y, b.s, b.p); });
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  const bar = document.getElementById('bar'), hint = document.getElementById('hint'), cnt = document.getElementById('count');
+  function say(t) { hint.textContent = t; hint.classList.add('show'); clearTimeout(say.t); say.t = setTimeout(() => hint.classList.remove('show'), 2600); }
+  function upd() { cnt.style.display = S.shells ? 'block' : 'none'; cnt.textContent = `오늘 주운 조개 ${S.shells}개`; }
+  function add(label, fn) { const b = document.createElement('button'); b.textContent = label; b.onclick = () => fn(b); bar.appendChild(b); return b; }
+  add('🐚 조개 줍기', () => { audio(); ding(); S.shells++; localStorage.setItem('shells', S.shells); upd(); S.found.push({ x: 300 + Math.random() * 1000, y: 800 + Math.random() * 70, s: .8 + Math.random() * .5, sp: 1 }); if (S.found.length > 8) S.found.shift(); say('예쁜 조개를 주웠어요'); });
+  add('🌊 파도소리', (b) => { audio(); waveOn = !waveOn; b.classList.toggle('on', waveOn); waveGain.gain.linearRampToValueAtTime(waveOn ? .55 : 0, AC.currentTime + 1.5); say(waveOn ? '파도 소리가 들려요' : '조용해졌어요'); });
+  add('🕊 갈매기', () => { audio(); chirp(); for (let i = 0; i < 2; i++) S.gulls.push({ x: -40 - i * 60, y: 130 + Math.random() * 170, v: 50 + Math.random() * 40, p: Math.random() * 6, s: .7 + Math.random() * .5 }); if (S.gulls.length > 9) S.gulls.splice(0, 2); say('갈매기가 날아와요'); });
+  upd();
+})();
+</script>
+</body>
+</html>
